@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "babel index.js resourceStore.js --out-dir dist --extensions \".js,.jsx\"",
-    "start": "npm run build && node dist/index.mjs",
+    "start": "npm run build && node dist/index.js",
     "dev": "npm run start"
   },
   "dependencies": {

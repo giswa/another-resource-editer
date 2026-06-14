@@ -1,3 +1,5 @@
+// to compile using babel cli, add --presets=@babel/preset-react
+
 import React, { useState } from 'react';
 import { render, Box, Text, useInput } from 'ink';
 import SelectInput from 'ink-select-input';
@@ -61,14 +63,6 @@ const App = () => {
         // Cancel popup back to list immediately
         setMode('list');
         setFocusedField('name');
-      } else if (mode === 'edit') {
-        if (editField) {
-          // If currently editing a field, go back to field selection
-          setEditField(null);
-        } else {
-          // If in edit resource selection, go back to list
-          setMode('list');
-        }
       }
     }
     if (mode === 'editBoth') {
@@ -150,68 +144,8 @@ const App = () => {
       </Box>
     );
   }
-  // Edit Mode - Editing Field
-  if (mode === 'edit' && editField && (editField === 'name' || editField === 'value')) {
-    const resource = resources[selectedIndex];
 
-    return (
-      <Box flexDirection="column">
-        <Text bold>✏️  Edit {editField}</Text>
-        <Text></Text>
-        <Text>Resource: {resource.name}</Text>
-        <Text>Current {editField}: {resource[editField]}</Text>
-        <Text></Text>
-        <Box>
-          <Text>New {editField}: </Text>
-          <TextInput
-            value={editValue}
-            onChange={setEditValue}
-            onSubmit={handleEditSubmit}
-          />
-        </Box>
-      </Box>
-    );
-  }
-
-  // Edit Mode - Select Field
-  if (mode === 'edit') {
-    const resource = resources[selectedIndex];
-    const fieldItems = [
-      { label: 'Edit Name', value: 'name' },
-      { label: 'Edit Value', value: 'value' },
-      { label: 'Edit Both', value: 'both' },
-      { label: 'Back to List', value: 'list' }
-    ];
-
-    return (
-      <Box flexDirection="column">
-        <Text bold>✏️  Edit Resource</Text>
-        <Text></Text>
-        <Text>Selected: {resource.name} = {resource.value}</Text>
-        <Text dimColor>(Press Esc to go back to list, Q to quit)</Text>
-        <Text></Text>
-        <SelectInput
-          items={fieldItems}
-          onSelect={(item) => {
-            if (item.value === 'list') {
-              setMode('list');
-            } else if (item.value === 'both') {
-              setEditField(null);
-              setEditName(resource.name);
-              setEditValue(resource.value);
-              setFocusedField('name');
-              setMode('editBoth');
-            } else {
-              setEditField(item.value);
-              setEditValue(resource[item.value]);
-            }
-          }}
-        />
-      </Box>
-    );
-  }
-
-  // Edit Both popup
+  // Edit popup
   if (mode === 'editBoth') {
     const resource = resources[selectedIndex];
     const handleSubmitBoth = () => {
@@ -228,20 +162,10 @@ const App = () => {
       setEditField(null);
     };
 
-    const boxWidth = 60;
-    const innerWidth = boxWidth - 2;
-    const top = '┌' + '─'.repeat(innerWidth) + '┐';
-    const bottom = '└' + '─'.repeat(innerWidth) + '┘';
-
     return (
-      <Box flexDirection="column" justifyContent="center" alignItems="center" height={14}>
-        <Box flexDirection="column" alignItems="center">
-          <Text>{top}</Text>
-          <Box>
-            <Text>│</Text>
-            <Box flexDirection="column" paddingX={1} width={innerWidth}>
+        <Box borderStyle="round" flexDirection="column" height={14} paddingX={1}>
               <Box>
-                <Text bold>🖊️  Edit Name, Value & Comment</Text>
+                <Text bold>Edit Key: {editName}</Text>
               </Box>
               <Box marginTop={1}>
                 <Text>Name: </Text>
@@ -252,7 +176,7 @@ const App = () => {
                   focus={focusedField === 'name'}
                 />
               </Box>
-              <Box marginTop={1}>
+              <Box>
                 <Text>Value: </Text>
                 <TextInput
                   value={editValue}
@@ -261,7 +185,7 @@ const App = () => {
                   focus={focusedField === 'value'}
                 />
               </Box>
-              <Box marginTop={1}>
+              <Box>
                 <Text>Comment: </Text>
                 <TextInput
                   value={editComment}
@@ -270,7 +194,7 @@ const App = () => {
                   focus={focusedField === 'comment'}
                 />
               </Box>
-              <Box marginTop={1}>
+              <Box>
                 <Text>
                   {focusedField === 'enabled' ? '▶ ' : '  '}
                   [
@@ -281,12 +205,7 @@ const App = () => {
               <Box marginTop={1}>
                 <Text dimColor>(Tab to switch, Space to toggle, Enter to submit, Esc to cancel)</Text>
               </Box>
-            </Box>
-            <Text>│</Text>
-          </Box>
-          <Text>{bottom}</Text>
         </Box>
-      </Box>
     );
   }
 };

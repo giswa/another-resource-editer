@@ -132,8 +132,7 @@ const App = () => {
 
     return (
       <Box flexDirection="column">
-        <Text bold>📝 Resources</Text>
-        <Text></Text>
+        <Text bold>Resources</Text>
         <SelectInput
           items={listItems}
           itemComponent={ListItem}
@@ -168,7 +167,7 @@ const App = () => {
                 <Text bold>Edit Key: {editName}</Text>
               </Box>
               <Box marginTop={1}>
-                <Text>Name: </Text>
+                <Text>Name:     </Text>
                 <TextInput
                   value={editName}
                   onChange={setEditName}
@@ -177,7 +176,7 @@ const App = () => {
                 />
               </Box>
               <Box>
-                <Text>Value: </Text>
+                <Text>Value:    </Text>
                 <TextInput
                   value={editValue}
                   onChange={setEditValue}
@@ -186,7 +185,7 @@ const App = () => {
                 />
               </Box>
               <Box>
-                <Text>Comment: </Text>
+                <Text>Comment:  </Text>
                 <TextInput
                   value={editComment}
                   onChange={setEditComment}
@@ -195,11 +194,12 @@ const App = () => {
                 />
               </Box>
               <Box>
+                <Text>Enabled:  </Text>
                 <Text>
                   {focusedField === 'enabled' ? '▶ ' : '  '}
                   [
                   {editEnabled ? 'x' : ' '}
-                  ] Enabled
+                  ]
                 </Text>
               </Box>
               <Box marginTop={1}>

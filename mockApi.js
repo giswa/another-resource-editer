@@ -1,5 +1,5 @@
-import express from 'express'
-import apiMocker from 'connect-api-mocker';
+var express = require('express');
+var apiMocker = require('connect-api-mocker');
 
 var app = express();
 

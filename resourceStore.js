@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Json2XML } from './azure/data';
+import { Json2XML } from '../azure/data.js';
 
 const testJsonPath = path.join(process.cwd(), 'test.json');
 

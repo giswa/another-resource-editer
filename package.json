@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "A Node.js console app to list, check, and edit resources using Ink/React",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "build": "babel index.js resourceStore.js --out-dir dist --extensions \".js,.jsx\"",
     "start": "npm run build && node dist/index.js",
-    "dev": "npm run start"
+    "dev": "npm run serve-mock-api & npm run start",
+    "serve-mock-api": "node mockApi.js"
   },
   "dependencies": {
     "connect-api-mocker": "^1.11.0",

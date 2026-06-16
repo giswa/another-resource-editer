@@ -1,8 +1,8 @@
-import url  from 'url';
-import fs  from 'fs';
-import path from 'path';
+const url =  require('url');
+const fs = require('fs');
+const path = require('path');
 
-export default function (request, response) {
+module.exports = function (request, response) {
 
     console.log("query:  ", request.path);
 

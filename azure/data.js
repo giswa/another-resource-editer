@@ -1,4 +1,4 @@
-const rootURL = process.env.REACT_APP_API_URL ;
+const rootURL = 'http://localhost:8080/api' ;
 
 export async function Xml2Json(datasource, url, lang, key, valid , comment){
     
@@ -144,7 +144,7 @@ function mergeInfoToComment(info){
 
 function getObjectId(response, branchPath = "refs/heads/master") {
   const branch = response.value.find(ref => ref.name === branchPath);
-  
+  console.log("branch ID: ", branch?.objectId);
   return branch ? branch.objectId : null;
 }
 

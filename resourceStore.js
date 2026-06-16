@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { Json2XML } from './azure/data';
 
 const testJsonPath = path.join(process.cwd(), 'test.json');
 
@@ -11,4 +12,5 @@ export const loadResources = () => {
 export const saveResources = (resources) => {
   const data = { resources };
   fs.writeFileSync(testJsonPath, JSON.stringify(data, null, 2));
+  Json2XML(resources);
 };

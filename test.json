@@ -3,7 +3,8 @@
     {
       "name": "Title",
       "value": "Classic American Cars",
-      "comment": "comment,date|"
+      "comment": "comment,date|",
+      "enabled": true
     },
     {
       "name": "HeaderString1",

@@ -17,10 +17,6 @@ module.exports = async function (request, response) {
     // write full payload to post.json file
 
     var dataFolder = path.join(__dirname,'..', '..', '..','data')
-    // var filePath = path.join(dataFolder, 'post.json' );
-    // // write file the all payload in the actual folder storage 
-    // console.log("Writting:", filePath);
-    // fs.writeFile( filePath , JSON.stringify(request.body, null, 2 ), callback );
     
 
     for ( let commit of request.body.commits )
@@ -43,6 +39,14 @@ module.exports = async function (request, response) {
     await sleep(1500);
 
     response.statusCode = 200;
-    response.end();
+    response.setHeader('Content-Type', 'application/json');
+    response.end(JSON.stringify({
+        pushId: Math.floor(Math.random() * 100000),
+        commits: request.body.commits,
+        refUpdates: request.body.refUpdates,
+        repository: 'localization',
+        pushedBy: 'ink-resources-editor',
+        createdDate: new Date().toISOString()
+    }));
     return;
 }

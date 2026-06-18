@@ -17,6 +17,7 @@ const ListItem = ({ label, isSelected, enabled = true }) => {
 const App = () => {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState('list');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -44,9 +45,17 @@ const App = () => {
       enabled: editEnabled
     };
     setResources(updated);
-    saveResources(updated).catch(err => console.error('Save error:', err));
-    setMode('list');
-    setEditField(null);
+    setSaving(true);
+    saveResources(updated)
+      .then(() => {
+        setSaving(false);
+        setMode('list');
+        setEditField(null);
+      })
+      .catch(err => {
+        console.error('Save error:', err);
+        setSaving(false);
+      });
   };
 
   // Global key handling: Q to quit, Esc to go back
@@ -62,7 +71,13 @@ const App = () => {
         enabled: updated[highlightedIndex].enabled === false ? true : false
       };
       setResources(updated);
-      saveResources(updated).catch(err => console.error('Save error:', err));
+      setSaving(true);
+      saveResources(updated)
+        .then(() => setSaving(false))
+        .catch(err => {
+          console.error('Save error:', err);
+          setSaving(false);
+        });
       return;
     }
 
@@ -149,6 +164,7 @@ const App = () => {
     return (
       <Box flexDirection="column">
         <Text bold>Resources (Sample.resx)</Text>
+        {saving && <Text color="yellow">⊙ Pushing to Azure DevOps...</Text>}
         <SelectInput
           items={listItems}
           itemComponent={ListItem}
@@ -163,22 +179,9 @@ const App = () => {
   // Edit popup
   if (mode === 'editBoth') {
     const resource = resources[selectedIndex];
-    const handleSubmitBoth = () => {
-      const updated = [...resources];
-      updated[selectedIndex] = {
-        ...updated[selectedIndex],
-        name: editName,
-        value: editValue,
-        comment: editComment
-      };
-      setResources(updated);
-      saveResources(updated);
-      setMode('list');
-      setEditField(null);
-    };
 
     return (
-        <Box borderStyle="round" flexDirection="column" height={14} paddingX={1}>
+        <Box borderStyle="round" flexDirection="column" height={saving ? 15 : 14} paddingX={1}>
               <Box>
                 <Text bold>Edit Key: {editName}</Text>
               </Box>
@@ -218,6 +221,7 @@ const App = () => {
                   ]
                 </Text>
               </Box>
+              {saving && <Box marginTop={1}><Text color="yellow">⊙ Pushing to Azure DevOps...</Text></Box>}
               <Box marginTop={1}>
                 <Text dimColor>(Tab to switch, Space to toggle, Enter to submit, Esc to cancel)</Text>
               </Box>

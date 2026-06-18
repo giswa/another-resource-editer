@@ -144,7 +144,7 @@ function mergeInfoToComment(info){
 
 function getObjectId(response, branchPath = "refs/heads/master") {
   const branch = response.value.find(ref => ref.name === branchPath);
-  console.log("branch ID: ", branch?.objectId);
+  // console.log("branch ID: ", branch?.objectId);
   return branch ? branch.objectId : null;
 }
 
@@ -165,7 +165,7 @@ export async function Json2XML(translation){
     let oldObjectId = getObjectId(JSON.parse(refdata), "refs/heads/master");
 
     try {
-        // first reload all original source file 
+
         let changes = [] ;
         let commitMessage = "" ;
         // transform in array
@@ -179,7 +179,10 @@ export async function Json2XML(translation){
         })
 
         for( let trans of t ){   
-            //console.timeLog();
+            
+            // console.timeLog();
+            console.log(`Processing translation for key: ${trans.key} in file: ${trans.path}`) ;
+            // first reload all original source file 
             //fetch file
             await fetch(`${rootURL}/items?path=${trans.path}`)
             .then(res => {

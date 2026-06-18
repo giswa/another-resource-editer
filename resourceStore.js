@@ -1,46 +1,47 @@
 import fs from 'fs';
 import path from 'path';
-import { Json2XML } from '../azure/data.js';
+import { parseStringPromise, Builder } from 'xml2js';
 
-const testJsonPath = path.join(process.cwd(), 'test.json');
+const resxPath = path.join(process.cwd(), 'data', 'Sample.resx');
 
-export const loadResources = () => {
-  const data = fs.readFileSync(testJsonPath, 'utf8');
-  return JSON.parse(data).resources;
+export const loadResources = async () => {
+  try {
+    const data = fs.readFileSync(resxPath, 'utf8');
+    const parsed = await parseStringPromise(data);
+    
+    const dataElements = parsed.root.data || [];
+    return dataElements
+      .filter(d => !d.$.type) // Filter out binary data
+      .map((d) => ({
+        name: d.$.name,
+        value: d.value ? d.value[0] : '',
+        comment: d.comment ? d.comment[0] : '',
+        enabled: true
+      }));
+  } catch (error) {
+    console.error('Error loading resources:', error);
+    return [];
+  }
 };
 
-export const saveResources = (resources) => {
-  // const data = { resources };
-  // fs.writeFileSync(testJsonPath, JSON.stringify(data, null, 2));
-  for (const resource of resources) {
-    if (resource.enabled) {
-      console.log(`Resource ${resource.id} is enabled. Saving changes...`);
-    } else {
-      console.log(`Resource ${resource.id} is disabled. Skipping save.`);
-      continue ; // Skip saving this resource
-    }
-    // Call Json2XML to save changes
-    let translation = { "fr": { datasource: "Sample", path: "Sample.resx", key: resource.name , 
-                                lang: "fr", value: resource.value, info: { comment: resource.comment } } };
-    Json2XML(translation);
+export const saveResources = async (resources) => {
+  try {
+    const data = fs.readFileSync(resxPath, 'utf8');
+    const parsed = await parseStringPromise(data);
+    
+    // Update data elements
+    resources.forEach((resource) => {
+      const dataElement = parsed.root.data.find(d => d.$.name === resource.name);
+      if (dataElement) {
+        dataElement.value = [resource.value];
+        dataElement.comment = [resource.comment];
+      }
+    });
+    
+    const builder = new Builder();
+    const xml = builder.buildObject(parsed);
+    fs.writeFileSync(resxPath, xml, 'utf8');
+  } catch (error) {
+    console.error('Error saving resources:', error);
   }
-
-/*
-
-fr:
-  lang: "fr"
-  path: "Sample.resx"
-  datasource: "Sample"
-  key: "HeaderString2"
-  value: "Model"
-  info: 
-    comment: "comment"
-    date: "date"
-    editor: "user"
-    validation: true
-
-*/
-
-
-
 };

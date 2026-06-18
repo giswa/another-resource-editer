@@ -1,6 +1,6 @@
 // to compile using babel cli, add --presets=@babel/preset-react
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { render, Box, Text, useInput } from 'ink';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
@@ -15,7 +15,8 @@ const ListItem = ({ label, isSelected, enabled = true }) => {
 };
 
 const App = () => {
-  const [resources, setResources] = useState(loadResources());
+  const [resources, setResources] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState('list');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -25,6 +26,13 @@ const App = () => {
   const [editComment, setEditComment] = useState('');
   const [editEnabled, setEditEnabled] = useState(true);
   const [focusedField, setFocusedField] = useState('name');
+
+  useEffect(() => {
+    loadResources().then(data => {
+      setResources(data);
+      setLoading(false);
+    });
+  }, []);
 
   const handleSubmitBoth = () => {
     const updated = [...resources];
@@ -36,7 +44,7 @@ const App = () => {
       enabled: editEnabled
     };
     setResources(updated);
-    saveResources(updated);
+    saveResources(updated).catch(err => console.error('Save error:', err));
     setMode('list');
     setEditField(null);
   };
@@ -54,7 +62,7 @@ const App = () => {
         enabled: updated[highlightedIndex].enabled === false ? true : false
       };
       setResources(updated);
-      saveResources(updated);
+      saveResources(updated).catch(err => console.error('Save error:', err));
       return;
     }
 
@@ -124,6 +132,14 @@ const App = () => {
 
   // List Mode
   if (mode === 'list') {
+    if (loading) {
+      return (
+        <Box flexDirection="column">
+          <Text bold>Loading resources...</Text>
+        </Box>
+      );
+    }
+
     const listItems = resources.map((resource, index) => ({
       label: `${resource.enabled === false ? '[ ]' : '[x]'} ${resource.name}: ${resource.value}`,
       value: index,
@@ -132,7 +148,7 @@ const App = () => {
 
     return (
       <Box flexDirection="column">
-        <Text bold>Resources</Text>
+        <Text bold>Resources (Sample.resx)</Text>
         <SelectInput
           items={listItems}
           itemComponent={ListItem}

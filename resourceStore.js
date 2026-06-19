@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parseStringPromise, Builder } from 'xml2js';
+import { Json2XML } from '../azure/data.js';
 
 const resxPath = path.join(process.cwd(), 'data', 'Sample.resx');
 
@@ -39,19 +40,48 @@ export const saveResources = async (resources) => {
     const parsed = await parseStringPromise(data);
     
     // Update data elements
-    resources.forEach((resource) => {
-      const dataElement = parsed.root.data.find(d => d.$.name === resource.name);
-      if (dataElement) {
-        dataElement.value = [resource.value];
-        dataElement.comment = [resource.comment];
+    for (const resource of resources) {
+      // const dataElement = parsed.root.data.find(d => d.$.name === resource.name);
+      // if (dataElement) {
+      //   dataElement.value = [resource.value];
+      //   dataElement.comment = [resource.comment];
+      // }
+
+      if (resource.enabled) {
+        console.log(`Resource ${resource.id} is enabled. Saving changes...`);
+      } else {
+        console.log(`Resource ${resource.id} is disabled. Skipping save.`);
+        continue ; // Skip saving this resource
       }
-    });
+      // Call Json2XML to save changes
+      let translation = { "fr": { datasource: "Sample", path: "Sample.resx", key: resource.name , 
+                                  lang: "fr", value: resource.value, info: { comment: resource.comment } } };
+      Json2XML(translation);
+      // console.log(translation);
+    }
     
-    const builder = new Builder();
-    const xml = builder.buildObject(parsed);
+    /*
+
+fr:
+  lang: "fr"
+  path: "Sample.resx"
+  datasource: "Sample"
+  key: "HeaderString2"
+  value: "Model"
+  info: 
+    comment: "comment"
+    date: "date"
+    editor: "user"
+    validation: true
+
+*/
+
+
+    // const builder = new Builder();
+    // const xml = builder.buildObject(parsed);
     
-    // Push changes to Azure DevOps via REST API
-    await pushToAzureDevOps(xml);
+    // // Push changes to Azure DevOps via REST API
+    // await pushToAzureDevOps(xml);
     
   } catch (error) {
     console.error('Error saving resources:', error);

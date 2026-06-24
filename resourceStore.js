@@ -48,15 +48,15 @@ export const saveResources = async (resources) => {
       // }
 
       if (resource.enabled) {
-        console.log(`Resource ${resource.id} is enabled. Saving changes...`);
+        console.log(`Resource ${resource.name} is enabled. Saving changes...`);
       } else {
-        console.log(`Resource ${resource.id} is disabled. Skipping save.`);
+        console.log(`Resource ${resource.name} is disabled. Skipping save.`);
         continue ; // Skip saving this resource
       }
       // Call Json2XML to save changes
       let translation = { "fr": { datasource: "Sample", path: "Sample.resx", key: resource.name , 
                                   lang: "fr", value: resource.value, info: { comment: resource.comment } } };
-      Json2XML(translation);
+      await Json2XML(translation);
       // console.log(translation);
     }
     

@@ -18,6 +18,7 @@ const App = () => {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
   const [mode, setMode] = useState('list');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -45,23 +46,48 @@ const App = () => {
       enabled: editEnabled
     };
     setResources(updated);
+    setHasChanges(true);
+    setMode('list');
+    setEditField(null);
+  };
+
+  const confirmSaveAndExit = () => {
+    if (!hasChanges) {
+      process.exit(0);
+      return;
+    }
+
     setSaving(true);
-    saveResources(updated)
+    saveResources(resources)
       .then(() => {
-        setSaving(false);
-        setMode('list');
-        setEditField(null);
+        process.exit(0);
       })
       .catch(err => {
         console.error('Save error:', err);
         setSaving(false);
+        setMode('list');
       });
+  };
+
+  const cancelExit = () => {
+    setMode('list');
   };
 
   // Global key handling: Q to quit, Esc to go back
   useInput((input, key) => {
-    if (input === 'q' || input === 'Q') {
-      process.exit(0);
+    if (mode === 'confirmExit') {
+      if (input === 'y' || input === 'Y') {
+        confirmSaveAndExit();
+      }
+      if (input === 'n' || input === 'N') {
+        cancelExit();
+      }
+      return;
+    }
+
+    if (mode === 'list' && (input === 'q' || input === 'Q')) {
+      setMode('confirmExit');
+      return;
     }
 
     if (mode === 'list' && input === ' ') {
@@ -71,13 +97,7 @@ const App = () => {
         enabled: updated[highlightedIndex].enabled === false ? true : false
       };
       setResources(updated);
-      setSaving(true);
-      saveResources(updated)
-        .then(() => setSaving(false))
-        .catch(err => {
-          console.error('Save error:', err);
-          setSaving(false);
-        });
+      setHasChanges(true);
       return;
     }
 
@@ -141,9 +161,22 @@ const App = () => {
       [editField]: editValue
     };
     setResources(updated);
-    saveResources(updated);
+    setHasChanges(true);
     setEditField(null);
   };
+
+  // Confirm exit
+  if (mode === 'confirmExit') {
+    return (
+      <Box borderStyle="round" flexDirection="column" paddingX={1} paddingY={1}>
+        <Text bold>Save changes and exit?</Text>
+        <Text>Resources will be pushed to Azure DevOps on confirm.</Text>
+        <Text>{hasChanges ? 'You have unsaved changes.' : 'No changes to save.'}</Text>
+        <Text>Press Y to save and exit, N to cancel.</Text>
+        {saving && <Text color="yellow">⊙ Saving changes...</Text>}
+      </Box>
+    );
+  }
 
   // List Mode
   if (mode === 'list') {
@@ -164,6 +197,7 @@ const App = () => {
     return (
       <Box flexDirection="column">
         <Text bold>Resources (Sample.resx)</Text>
+        {hasChanges && <Text color="yellow">Unsaved changes will be pushed on exit.</Text>}
         {saving && <Text color="yellow">⊙ Pushing to Azure DevOps...</Text>}
         <SelectInput
           items={listItems}
@@ -171,7 +205,7 @@ const App = () => {
           onSelect={handleResourceSelect}
           onHighlight={handleHighlight}
         />
-        <Text dimColor>(Press Space to toggle enabled, Q to quit, Enter to edit both)</Text>
+        <Text dimColor>(Press Space to toggle enabled, Q to exit, Enter to edit both)</Text>
       </Box>
     );
   }

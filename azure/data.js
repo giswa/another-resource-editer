@@ -151,7 +151,7 @@ function getObjectId(response, branchPath = "refs/heads/master") {
 
 // save change into XML
 export async function Json2XML(translation){
-   
+    
     // get git last commit ID
     const ref = await fetch(`${rootURL}/refs`)
     let refdata = '';
@@ -165,7 +165,7 @@ export async function Json2XML(translation){
     let oldObjectId = getObjectId(JSON.parse(refdata), "refs/heads/master");
 
     try {
-
+        
         let changes = [] ;
         let commitMessage = "" ;
         // transform in array
@@ -196,7 +196,7 @@ export async function Json2XML(translation){
             .then((xml) => {
 
                 // Change the value node and the comment
-                const updatedXML = updateOrInsertResxEntry(xml, translation.key, trans.value , mergeInfoToComment(trans.info) );
+                const updatedXML = updateOrInsertResxEntry(xml, trans.key, trans.value , mergeInfoToComment(trans.info) );
                 
                 if ( updatedXML != xml  )
                     changes.push(  {

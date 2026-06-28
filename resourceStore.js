@@ -36,40 +36,23 @@ export const loadResources = async () => {
 
 export const saveResources = async (resources) => {
   try {
-    const data = fs.readFileSync(resxPath, 'utf8');
-    const parsed = await parseStringPromise(data);
     
-    // Update data elements
+    // create an Array of translations to be saved
+    const translations = [];
     for (const resource of resources) {
 
-      if (resource.enabled) {
-        console.log(`Resource ${resource.name} is enabled. Saving changes...`);
-      } else {
-        console.log(`Resource ${resource.name} is disabled. Skipping save.`);
-        continue ; // Skip saving this resource
+      if (!resource.enabled) {
+        continue ; // Skip saving this resource if not enabled
       }
-      // Call Json2XML to save changes
+      
       let translation = { "fr": { datasource: "Sample", path: "Sample.resx", key: resource.name , 
                                   lang: "fr", value: resource.value, info: { comment: resource.comment } } };
-      await Json2XML(translation);
-     
+
+      translations.push(translation);
     }
     
-    /*
-
-    fr:
-      lang: "fr"
-      path: "Sample.resx"
-      datasource: "Sample"
-      key: "HeaderString2"
-      value: "Model"
-      info: 
-        comment: "comment"
-        date: "date"
-        editor: "user"
-        validation: true
-
-    */
+    // Call Json2XML to save changes
+    await Json2XML(translations, "commit message");
 
     
   } catch (error) {

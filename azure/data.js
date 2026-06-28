@@ -150,8 +150,45 @@ function getObjectId(response, branchPath = "refs/heads/master") {
 
 
 // save change into XML
-export async function Json2XML(translation){
-    
+export async function Json2XML(translations, commitMessage) {
+
+    const input = translations;
+    const result = {};
+
+    for (let i = 0; i < input.length; i++) {
+        const item = input[i];
+
+        // Each item is an object with one key, such as "fr" or "de"
+        const languageKey = Object.keys(item)[0];
+
+        // Get the object stored under that language key
+        const entry = item[languageKey];
+
+        // Use the file path as the group name
+        const filePath = entry.path;
+
+        // If this path has not been seen yet, create an array for it
+        if (!result[filePath]) {
+            result[filePath] = [];
+        }
+
+        // // Create a copy of the entry without the path property
+        // const normalizedEntry = { ...entry };
+
+        // // Remove the path from the object because we are grouping by path now
+        // delete normalizedEntry.path;
+
+        // Add the normalized object to the right group
+        result[filePath].push(entry);
+    }
+
+    //console.log(result);
+
+    await sendTranslations(result, commitMessage)
+
+}
+
+async function sendTranslations(translations, commitMessage) {
     // get git last commit ID
     const ref = await fetch(`${rootURL}/refs`)
     let refdata = '';
@@ -167,51 +204,33 @@ export async function Json2XML(translation){
     try {
         
         let changes = [] ;
-        let commitMessage = "" ;
-        // transform in array
-        let t = [] ;
-        Object.keys(translation).forEach((lang, idx, arr) => {
-            if ( translation[lang].hasOwnProperty('lang') ) { // not a tranlation object 
-                t.push(translation[lang]) ;
-                // hack 
-                if (lang == 'fr') commitMessage = translation[lang].info.comment ;
-            }
-        })
-
-        for( let trans of t ){   
-            
-            // console.timeLog();
-            console.log(`Processing translation for key: ${trans.key} in file: ${trans.path}`) ;
+        
+        for (const path in translations) {
+            // console.log(`Processing translations for file: ${path}`);
             // first reload all original source file 
             //fetch file
-            await fetch(`${rootURL}/items?path=${trans.path}`)
-            .then(res => {
-                if (res.ok) {
-                    // console.log(res)
-                    return res.text()   
-                }
+            const res = await fetch(`${rootURL}/items?path=${path}`) ;
+            let xml = await res.text() ;
 
-            throw new Error('Bad reponse')
-            })
-            .then((xml) => {
+            // loop through all translations for this file
+            for( const trans of translations[path] ){   
 
+                // console.log(`Processing key: ${trans.key} with value: ${trans.value}`) ;
                 // Change the value node and the comment
-                const updatedXML = updateOrInsertResxEntry(xml, trans.key, trans.value , mergeInfoToComment(trans.info) );
+                xml = updateOrInsertResxEntry(xml, trans.key, trans.value , mergeInfoToComment(trans.info) );
                 
-                if ( updatedXML != xml  )
-                    changes.push(  {
-                        "changeType": "edit",
-                        "item": {
-                            "path": trans.path
-                        },
-                        "newContent": {
-                            "content": updatedXML , 
-                            "contentType": "rawtext"
-                        }
-                    }) ;
-                
-            })
-            .catch(err => { throw err });      
+            }
+            changes.push({
+                "changeType": "edit",
+                "item": {
+                    "path": path
+                },
+                "newContent": {
+                    "content": xml , 
+                    "contentType": "rawtext"
+                }
+            }) ;
+
         }
         
         // if any changes

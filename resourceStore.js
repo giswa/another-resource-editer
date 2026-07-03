@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parseStringPromise, Builder } from 'xml2js';
-import { Json2XML } from '../azure/data.js';
+import { Json2XML } from './azure/data.js';
 
 const resxPath = path.join(process.cwd(), 'data', 'Sample.resx');
 

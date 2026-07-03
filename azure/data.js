@@ -1,50 +1,58 @@
 const rootURL = 'http://localhost:8081/api' ;
 
+
+export async function fetchResxFile( url ) {
+    
+    console.log( "loading" , `${rootURL}/items?path=${url}`);
+    //console.timeLog();
+    
+    const ref = await fetch(`${rootURL}/items?path=${url}`)
+    let refdata = '';
+    if (ref.ok) {
+        refdata = await ref.text()
+    }
+    else {
+        throw new Error('Bad reponse')
+    }
+
+    return refdata ;
+}
+
+
 export async function Xml2Json(datasource, url, lang, key, valid , comment){
     
-    console.log( "loading" , url);
-    
-    //console.timeLog();
     let data = '';
     try {
-        //fetch file
-        await fetch(`${rootURL}/items?path=${url}`)
-            .then(res => {
-                if (res.ok) {
-                    return res.text()   
-                }
-                throw new Error('Bad reponse')
-            })
-            .then((d) => {
+        await fetchResxFile( url )
+           .then((d) => {
                 data = d;
             })
-            .catch(err => { throw err });
         }
-        catch (error) {
+    catch (error) {
         console.error(error);
         return [] ;
     }
 
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(data, "application/xml");
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(data, "application/xml");
 
-        const errorNode = doc.querySelector("parsererror");
-        if (errorNode) {
-            throw new Error("error while parsing");
-        } 
-        else {
-            
-            const arr =  [] ;
-            doc.querySelectorAll("data").forEach(
-                (node) => {  
-                    // filter non text rows and thoses begining with ">>"
-                    if (  node.getAttribute('type') == null && !  node.getAttribute('name').startsWith(">>") ) {
-                        arr.push( matchTrad(node, datasource, lang, url) );
-                    }
-                });
-            return arr ;
+    const errorNode = doc.querySelector("parsererror");
+    if (errorNode) {
+        throw new Error("error while parsing");
+    } 
+    else {
+        
+        const arr =  [] ;
+        doc.querySelectorAll("data").forEach(
+            (node) => {  
+                // filter non text rows and thoses begining with ">>"
+                if (  node.getAttribute('type') == null && !  node.getAttribute('name').startsWith(">>") ) {
+                    arr.push( matchTrad(node, datasource, lang, url) );
+                }
+            });
+        return arr ;
 
-        } 
+    } 
 }
 
 /*

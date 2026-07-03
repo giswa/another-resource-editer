@@ -1,22 +1,11 @@
-import fs from 'fs';
-import path from 'path';
-import { parseStringPromise, Builder } from 'xml2js';
-import { Json2XML } from './azure/data.js';
 
-const resxPath = path.join(process.cwd(), 'data', 'Sample.resx');
-
-// Azure DevOps Configuration
-const ADO_CONFIG = {
-  organization: 'my_organisation',
-  project: 'test',
-  repository: 'localization',
-  branch: 'master',
-  apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:8080/api'
-};
+import { parseStringPromise } from 'xml2js';
+import { Json2XML, fetchResxFile } from './azure/data.js';
 
 export const loadResources = async () => {
   try {
-    const data = fs.readFileSync(resxPath, 'utf8');
+    const data = await fetchResxFile('Sample.resx');
+    // console.log('Fetched data:', data); // Log the fetched data for debugging
     const parsed = await parseStringPromise(data);
     
     const dataElements = parsed.root.data || [];

@@ -4,11 +4,38 @@ import React, { useState, useEffect } from 'react';
 import { render, useInput, Box, Text } from 'ink';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
-import fs from 'fs';
-import path from 'path';
 import { parseStringPromise } from 'xml2js';
 
 const rootURL = 'http://localhost:8081/api';
+async function fetchResxFile(url) {
+  console.log("loading", `${rootURL}/items?path=${url}`);
+  //console.timeLog();
+
+  const ref = await fetch(`${rootURL}/items?path=${url}`);
+  let refdata = '';
+  if (ref.ok) {
+    refdata = await ref.text();
+  } else {
+    throw new Error('Bad reponse');
+  }
+  return refdata;
+}
+async function getObjectId() {
+  // get git last commit ID
+  const ref = await fetch(`${rootURL}/refs`);
+  let refdata = '';
+  if (ref.ok) {
+    refdata = await ref.text();
+  } else {
+    throw new Error('Bad reponse');
+  }
+  const response = JSON.parse(refdata);
+  const branchPath = "refs/heads/master";
+  // let oldObjectId = getObjectId(JSON.parse(refdata), "refs/heads/master");
+  const branch = response.value.find(ref => ref.name === branchPath);
+  // console.log("branch ID: ", branch?.objectId);
+  return branch ? branch.objectId : null;
+}
 function mergeInfoToComment(info) {
   let editor = "";
   let date = "";
@@ -19,11 +46,6 @@ function mergeInfoToComment(info) {
   if (info.editor) editor = `:${info.editor}`;
   if (info.date) date = `,${info.date}`;
   return `${comment}${date}${valid}${editor}`;
-}
-function getObjectId(response, branchPath = "refs/heads/master") {
-  const branch = response.value.find(ref => ref.name === branchPath);
-  // console.log("branch ID: ", branch?.objectId);
-  return branch ? branch.objectId : null;
 }
 
 // save change into XML
@@ -62,23 +84,14 @@ async function Json2XML(translations, commitMessage) {
   await sendTranslations(result, commitMessage);
 }
 async function sendTranslations(translations, commitMessage) {
-  // get git last commit ID
-  const ref = await fetch(`${rootURL}/refs`);
-  let refdata = '';
-  if (ref.ok) {
-    refdata = await ref.text();
-  } else {
-    throw new Error('Bad reponse');
-  }
-  let oldObjectId = getObjectId(JSON.parse(refdata), "refs/heads/master");
+  // get last commit ID
+  const oldObjectId = await getObjectId();
   try {
     let changes = [];
     for (const path in translations) {
       // console.log(`Processing translations for file: ${path}`);
       // first reload all original source file 
-      //fetch file
-      const res = await fetch(`${rootURL}/items?path=${path}`);
-      let xml = await res.text();
+      let xml = await fetchResxFile(path);
 
       // loop through all translations for this file
       for (const trans of translations[path]) {
@@ -190,15 +203,10 @@ function escapeXml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
-const resxPath = path.join(process.cwd(), 'data', 'Sample.resx');
-
-// Azure DevOps Configuration
-({
-  apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:8080/api'
-});
 const loadResources = async () => {
   try {
-    const data = fs.readFileSync(resxPath, 'utf8');
+    const data = await fetchResxFile('Sample.resx');
+    // console.log('Fetched data:', data); // Log the fetched data for debugging
     const parsed = await parseStringPromise(data);
     const dataElements = parsed.root.data || [];
     return dataElements.filter(d => !d.$.type) // Filter out binary data

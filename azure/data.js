@@ -19,6 +19,26 @@ export async function fetchResxFile( url ) {
 }
 
 
+async function getObjectId() {
+    // get git last commit ID
+    const ref = await fetch(`${rootURL}/refs`)
+    let refdata = '';
+    if (ref.ok) {
+        refdata = await ref.text()
+    }
+    else {
+        throw new Error('Bad reponse')
+    }
+    const response = JSON.parse(refdata) ; 
+    const branchPath = "refs/heads/master" ;
+    // let oldObjectId = getObjectId(JSON.parse(refdata), "refs/heads/master");
+    const branch = response.value.find(ref => ref.name === branchPath);
+    // console.log("branch ID: ", branch?.objectId);
+    return branch ? branch.objectId : null;
+}
+
+
+
 export async function Xml2Json(datasource, url, lang, key, valid , comment){
     
     let data = '';
@@ -150,12 +170,6 @@ function mergeInfoToComment(info){
 
 
 
-function getObjectId(response, branchPath = "refs/heads/master") {
-  const branch = response.value.find(ref => ref.name === branchPath);
-  // console.log("branch ID: ", branch?.objectId);
-  return branch ? branch.objectId : null;
-}
-
 
 // save change into XML
 export async function Json2XML(translations, commitMessage) {
@@ -197,17 +211,9 @@ export async function Json2XML(translations, commitMessage) {
 }
 
 async function sendTranslations(translations, commitMessage) {
-    // get git last commit ID
-    const ref = await fetch(`${rootURL}/refs`)
-    let refdata = '';
-    if (ref.ok) {
-        refdata = await ref.text()
-    }
-    else {
-        throw new Error('Bad reponse')
-    }
 
-    let oldObjectId = getObjectId(JSON.parse(refdata), "refs/heads/master");
+    // get last commit ID
+    const oldObjectId = await getObjectId();
 
     try {
         
@@ -216,9 +222,7 @@ async function sendTranslations(translations, commitMessage) {
         for (const path in translations) {
             // console.log(`Processing translations for file: ${path}`);
             // first reload all original source file 
-            //fetch file
-            const res = await fetch(`${rootURL}/items?path=${path}`) ;
-            let xml = await res.text() ;
+            let xml = await fetchResxFile( path ) ;
 
             // loop through all translations for this file
             for( const trans of translations[path] ){   

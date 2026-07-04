@@ -1,4 +1,3 @@
-// to compile using babel cli, add --presets=@babel/preset-react
 
 import React, { useState, useEffect } from 'react';
 import { render, Box, Text, useInput } from 'ink';

@@ -5,36 +5,17 @@ import { render, useInput, Box, Text } from 'ink';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
 import { parseStringPromise } from 'xml2js';
+import { fetchFile, getObjectId, saveFiles } from 'git-storage-api';
 
-const rootURL = 'http://localhost:8081/api';
+// temporary function to fetch resx file content, can be replaced by fetchFile when the API is ready
 async function fetchResxFile(url) {
-  console.log("loading", `${rootURL}/items?path=${url}`);
-  //console.timeLog();
-
-  const ref = await fetch(`${rootURL}/items?path=${url}`);
-  let refdata = '';
-  if (ref.ok) {
-    refdata = await ref.text();
-  } else {
-    throw new Error('Bad reponse');
+  try {
+    const res = await fetchFile(url);
+    return res;
+  } catch (error) {
+    console.error(error);
+    throw new Error(`Failed to fetch file from ${url}: ${error.message}`);
   }
-  return refdata;
-}
-async function getObjectId() {
-  // get git last commit ID
-  const ref = await fetch(`${rootURL}/refs`);
-  let refdata = '';
-  if (ref.ok) {
-    refdata = await ref.text();
-  } else {
-    throw new Error('Bad reponse');
-  }
-  const response = JSON.parse(refdata);
-  const branchPath = "refs/heads/master";
-  // let oldObjectId = getObjectId(JSON.parse(refdata), "refs/heads/master");
-  const branch = response.value.find(ref => ref.name === branchPath);
-  // console.log("branch ID: ", branch?.objectId);
-  return branch ? branch.objectId : null;
 }
 function mergeInfoToComment(info) {
   let editor = "";
@@ -69,14 +50,9 @@ async function Json2XML(translations, commitMessage) {
       result[filePath] = [];
     }
 
-    // // Create a copy of the entry without the path property
-    // const normalizedEntry = { ...entry };
-
-    // // Remove the path from the object because we are grouping by path now
-    // delete normalizedEntry.path;
-
     // Add the normalized object to the right group
     result[filePath].push(entry);
+    result[filePath]["content"] = ""; // Initialize content for each file path
   }
 
   //console.log(result);
@@ -86,72 +62,20 @@ async function Json2XML(translations, commitMessage) {
 async function sendTranslations(translations, commitMessage) {
   // get last commit ID
   const oldObjectId = await getObjectId();
-  try {
-    let changes = [];
-    for (const path in translations) {
-      // console.log(`Processing translations for file: ${path}`);
-      // first reload all original source file 
-      let xml = await fetchResxFile(path);
+  for (const path in translations) {
+    // console.log(`Processing translations for file: ${path}`);
+    // first reload all original source file 
+    let xml = await fetchFile(path);
 
-      // loop through all translations for this file
-      for (const trans of translations[path]) {
-        // console.log(`Processing key: ${trans.key} with value: ${trans.value}`) ;
-        // Change the value node and the comment
-        xml = updateOrInsertResxEntry(xml, trans.key, trans.value, mergeInfoToComment(trans.info));
-      }
-      changes.push({
-        "changeType": "edit",
-        "item": {
-          "path": path
-        },
-        "newContent": {
-          "content": xml,
-          "contentType": "rawtext"
-        }
-      });
+    // loop through all translations for this file
+    for (const trans of translations[path]) {
+      // console.log(`Processing key: ${trans.key} with value: ${trans.value}`) ;
+      // Change the value node and the comment
+      xml = updateOrInsertResxEntry(xml, trans.key, trans.value, mergeInfoToComment(trans.info));
     }
-
-    // if any changes
-    if (changes.length > 0) {
-      let body = {
-        "refUpdates": [{
-          "name": "refs/heads/master",
-          "oldObjectId": oldObjectId
-        }],
-        "commits": [{
-          "comment": commitMessage,
-          "changes": changes
-        }]
-      };
-
-      // send xml throught api 
-      // console.log("sending change")
-
-      const requestOptions = {
-        method: 'POST',
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
-      };
-
-      // resx mock is having a 100ko limit in the body
-      const res = await fetch(`${rootURL}/pushes?api-version=6.0`, requestOptions);
-      if (res.ok) {
-        return {
-          ok: true,
-          error: null
-        };
-      } else {
-        throw new Error(`received status: ${res.status}`);
-      }
-    }
-  } catch (error) {
-    return {
-      ok: false,
-      error: error.message
-    };
+    translations[path].content = xml;
   }
+  await saveFiles(translations, oldObjectId, commitMessage);
 }
 function updateOrInsertResxEntry(xml, key, newValue, newComment) {
   // fail safe for null/undefined values
@@ -250,8 +174,6 @@ const saveResources = async resources => {
     console.error('Error saving resources:', error);
   }
 };
-
-// to compile using babel cli, add --presets=@babel/preset-react
 
 const ListItem = ({
   label,

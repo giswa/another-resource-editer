@@ -1,6 +1,6 @@
 
 import { parseStringPromise } from 'xml2js';
-import { Json2XML, fetchResxFile } from './azure/data.js';
+import { Json2XML, fetchResxFile } from './data.js';
 
 export const loadResources = async () => {
   try {

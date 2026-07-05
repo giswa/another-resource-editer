@@ -31,9 +31,8 @@ async function Xml2Json(datasource, path, lang) {
 }
 function matchTrad(node, datasource, lang, path) {
   const key = node?.['@_name'] ?? '';
-  const value = normalizeValue(node?.value);
-  const encodedMetadata = normalizeValue(node?.comment);
-  const info = splitCommentToInfo(encodedMetadata);
+  const value = node?.value;
+  const info = splitCommentToInfo(lang, node?.comment);
   return {
     path,
     datasource,
@@ -43,42 +42,27 @@ function matchTrad(node, datasource, lang, path) {
     info
   };
 }
-function normalizeValue(value) {
-  if (Array.isArray(value)) {
-    return value[0] ?? '';
-  }
-  return value ?? '';
-}
-function splitCommentToInfo(encoded) {
+function splitCommentToInfo(lang, encodedComment) {
   let editor = '';
   let validation = false;
   let date = '';
   let comment = '';
-  if (encoded) {
-    //If comment and validation
-    if (encoded.indexOf("|") >= 0) {
-      let commentArray = encoded.split('|');
+  if (encodedComment) {
+    // console.log(encoded)
 
-      //Check if there's a validation
-      if (commentArray[1]) {
+    // default language contains main comment
+    {
+      // Ensure a split separator
+      encodedComment = encodedComment + "|";
+      comment = encodedComment.split('|')[0].split(',')[0];
+      date = encodedComment.split('|')[0].split(',')[1];
+      let valid_info = encodedComment.split("|")[1];
+      if (valid_info) {
         validation = true;
-        let editorName = commentArray[1].split(':');
-        if (editorName[1]) {
-          editor = editorName[1].trim();
+        let editorArray = encodedComment.split(':');
+        if (editorArray[1]) {
+          editor = editorArray[1].trim();
         }
-      }
-      comment = commentArray[0];
-      if (comment.indexOf(",") > 0) {
-        const c = comment.split(",");
-        comment = c[0];
-        date = c[1];
-      }
-    } else {
-      //Else only validation
-      validation = true;
-      let editorArray = encoded.split(':');
-      if (editorArray[1]) {
-        editor = editorArray[1].trim();
       }
     }
   }
@@ -89,16 +73,20 @@ function splitCommentToInfo(encoded) {
     comment: comment
   };
 }
-function mergeInfoToComment(info) {
+function mergeInfoToComment(lang, info) {
   let editor = "";
   let date = "";
   let valid = "";
   let comment = "";
-  if (info.validation) valid = "|OK";
+  if (info.validation) valid = "OK";
   if (info.comment) comment = info.comment;
   if (info.editor) editor = `:${info.editor}`;
   if (info.date) date = `,${info.date}`;
-  return `${comment}${date}${valid}${editor}`;
+  if (lang == 'fr') {
+    return `${comment}${date}|${valid}${editor}`;
+  } else {
+    return `${valid}${editor}`;
+  }
 }
 
 // save change into XML
@@ -127,7 +115,7 @@ async function Json2XML(translations, commitMessage) {
     result[filePath]["content"] = ""; // Initialize content for each file path
   }
 
-  //console.log(result);
+  // console.log(result);
 
   await sendTranslations(result, commitMessage);
 }
@@ -143,7 +131,7 @@ async function sendTranslations(translations, commitMessage) {
     for (const trans of translations[path]) {
       // console.log(`Processing key: ${trans.key} with value: ${trans.value}`) ;
       // Change the value node and the comment
-      xml = updateOrInsertResxEntry(xml, trans.key, trans.value, mergeInfoToComment(trans.info));
+      xml = updateOrInsertResxEntry(xml, trans.key, trans.value, mergeInfoToComment(trans.lang, trans.info));
     }
     translations[path].content = xml;
   }
@@ -229,6 +217,9 @@ const saveResources = async resources => {
           lang: "fr",
           value: resource.value,
           info: {
+            validation: false,
+            editor: '',
+            date: '',
             comment: resource.comment
           }
         }

@@ -28,8 +28,19 @@ export const saveResources = async (resources) => {
         continue ; // Skip saving this resource if not enabled
       }
       
-      let translation = { "fr": { datasource: "Sample", path: "Sample.resx", key: resource.name , 
-                                  lang: "fr", value: resource.value, info: { comment: resource.comment } } };
+      let translation = { "fr": { datasource: "Sample", 
+                                  path: "Sample.resx", 
+                                  key: resource.name , 
+                                  lang: "fr", 
+                                  value: resource.value, 
+                                  info: { 
+                                    validation: false,
+                                    editor: '',
+                                    date: '',
+                                    comment: resource.comment
+                                  }
+                                } 
+                          };
 
       translations.push(translation);
     }

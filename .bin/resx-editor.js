@@ -4,18 +4,90 @@ import React, { useState, useEffect } from 'react';
 import { render, useInput, Box, Text } from 'ink';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
-import { parseStringPromise } from 'xml2js';
+import { XMLParser } from 'fast-xml-parser';
 import { fetchFile, getObjectId, saveFiles } from 'git-storage-api';
 
-// temporary function to fetch resx file content, can be replaced by fetchFile when the API is ready
-async function fetchResxFile(url) {
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  trimValues: true
+});
+async function Xml2Json(datasource, path, lang) {
+  let data = '';
   try {
-    const res = await fetchFile(url);
-    return res;
+    data = await fetchFile(path);
   } catch (error) {
     console.error(error);
-    throw new Error(`Failed to fetch file from ${url}: ${error.message}`);
+    return [];
   }
+  try {
+    const parsed = xmlParser.parse(data);
+    const dataElements = Array.isArray(parsed?.root?.data) ? parsed.root.data : parsed?.root?.data ? [parsed.root.data] : [];
+    return dataElements.filter(node => !node?.['@_type'] && !node?.['@_name']?.startsWith('>>')).map(node => matchTrad(node, datasource, lang, path));
+  } catch (error) {
+    console.error(error);
+    throw new Error('error while parsing');
+  }
+}
+function matchTrad(node, datasource, lang, path) {
+  const key = node?.['@_name'] ?? '';
+  const value = normalizeValue(node?.value);
+  const encodedMetadata = normalizeValue(node?.comment);
+  const info = splitCommentToInfo(encodedMetadata);
+  return {
+    path,
+    datasource,
+    key,
+    lang,
+    value,
+    info
+  };
+}
+function normalizeValue(value) {
+  if (Array.isArray(value)) {
+    return value[0] ?? '';
+  }
+  return value ?? '';
+}
+function splitCommentToInfo(encoded) {
+  let editor = '';
+  let validation = false;
+  let date = '';
+  let comment = '';
+  if (encoded) {
+    //If comment and validation
+    if (encoded.indexOf("|") >= 0) {
+      let commentArray = encoded.split('|');
+
+      //Check if there's a validation
+      if (commentArray[1]) {
+        validation = true;
+        let editorName = commentArray[1].split(':');
+        if (editorName[1]) {
+          editor = editorName[1].trim();
+        }
+      }
+      comment = commentArray[0];
+      if (comment.indexOf(",") > 0) {
+        const c = comment.split(",");
+        comment = c[0];
+        date = c[1];
+      }
+    } else {
+      //Else only validation
+      validation = true;
+      let editorArray = encoded.split(':');
+      if (editorArray[1]) {
+        editor = editorArray[1].trim();
+      }
+    }
+  }
+  return {
+    validation: validation,
+    date: date,
+    editor: editor,
+    comment: comment
+  };
 }
 function mergeInfoToComment(info) {
   let editor = "";
@@ -129,15 +201,11 @@ function escapeXml(str) {
 
 const loadResources = async () => {
   try {
-    const data = await fetchResxFile('Sample.resx');
-    // console.log('Fetched data:', data); // Log the fetched data for debugging
-    const parsed = await parseStringPromise(data);
-    const dataElements = parsed.root.data || [];
-    return dataElements.filter(d => !d.$.type) // Filter out binary data
-    .map(d => ({
-      name: d.$.name,
-      value: d.value ? d.value[0] : '',
-      comment: d.comment ? d.comment[0] : '',
+    const resources = await Xml2Json('Sample', 'Sample.resx', 'fr');
+    return resources.map(resource => ({
+      name: resource.key,
+      value: resource.value ?? '',
+      comment: resource.info?.comment ?? '',
       enabled: true
     }));
   } catch (error) {

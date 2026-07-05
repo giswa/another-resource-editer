@@ -1,73 +1,61 @@
+import { XMLParser } from 'fast-xml-parser';
 import { fetchFile, getObjectId, saveFiles } from 'git-storage-api';
 
-// temporary function to fetch resx file content, can be replaced by fetchFile when the API is ready
-export async function fetchResxFile(url) {
-    try {
-        const res = await fetchFile(url);
-        return res;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to fetch file from ${url}: ${error.message}`);
-    }
-}
-/*
-export async function Xml2Json(datasource, url, lang, key, valid , comment){
-    
+const xmlParser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    trimValues: true
+});
+
+export async function Xml2Json(datasource, path, lang){
     let data = '';
     try {
-        await fetchFile( url )
-           .then((d) => {
-                data = d;
-            })
-        }
-    catch (error) {
+        data = await fetchFile(path);
+    } catch (error) {
         console.error(error);
-        return [] ;
+        return [];
     }
 
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(data, "application/xml");
+    try {
+        const parsed = xmlParser.parse(data);
+        const dataElements = Array.isArray(parsed?.root?.data)
+            ? parsed.root.data
+            : parsed?.root?.data
+                ? [parsed.root.data]
+                : [];
 
-    const errorNode = doc.querySelector("parsererror");
-    if (errorNode) {
-        throw new Error("error while parsing");
-    } 
-    else {
-        
-        const arr =  [] ;
-        doc.querySelectorAll("data").forEach(
-            (node) => {  
-                // filter non text rows and thoses begining with ">>"
-                if (  node.getAttribute('type') == null && !  node.getAttribute('name').startsWith(">>") ) {
-                    arr.push( matchTrad(node, datasource, lang, url) );
-                }
-            });
-        return arr ;
-
-    } 
+        return dataElements
+            .filter((node) => !node?.['@_type'] && !node?.['@_name']?.startsWith('>>'))
+            .map((node) => matchTrad(node, datasource, lang, path));
+    } catch (error) {
+        console.error(error);
+        throw new Error('error while parsing');
+    }
 }
-*/
-/*
-*  Get nodes from .resx files and transfer them in a readable object
-*/
-function matchTrad(node, datasource, lang,url) {
-    let translations = [];
-   
-    //key is the name attribute
-    let key = node.getAttribute('name');
-    let value = node.getElementsByTagName("value")[0]?.textContent.toString()
-    let encodedMedata = node.getElementsByTagName("comment")[0]?.textContent.toString()
-    let info = splitCommentToInfo(encodedMedata) ;
-    // console.log(datasource,lang, key, comment, validation)
+
+
+function matchTrad(node, datasource, lang, path) {
+    const key = node?.['@_name'] ?? '';
+    const value = normalizeValue(node?.value);
+    const encodedMetadata = normalizeValue(node?.comment);
+    const info = splitCommentToInfo(encodedMetadata);
 
     return {
-        path: url,
-        datasource: datasource,
-        key : key,
-        lang : lang,
-        value : value ,
-        info: info 
+        path,
+        datasource,
+        key,
+        lang,
+        value,
+        info
     };
+}
+
+function normalizeValue(value) {
+    if (Array.isArray(value)) {
+        return value[0] ?? '';
+    }
+
+    return value ?? '';
 }
 
 

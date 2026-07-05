@@ -1,22 +1,16 @@
 
-import { parseStringPromise } from 'xml2js';
-import { Json2XML, fetchResxFile } from './data.js';
+import { Json2XML, Xml2Json } from './data.js';
 
 export const loadResources = async () => {
   try {
-    const data = await fetchResxFile('Sample.resx');
-    // console.log('Fetched data:', data); // Log the fetched data for debugging
-    const parsed = await parseStringPromise(data);
-    
-    const dataElements = parsed.root.data || [];
-    return dataElements
-      .filter(d => !d.$.type) // Filter out binary data
-      .map((d) => ({
-        name: d.$.name,
-        value: d.value ? d.value[0] : '',
-        comment: d.comment ? d.comment[0] : '',
-        enabled: true
-      }));
+    const resources = await Xml2Json('Sample', 'Sample.resx', 'fr');
+
+    return resources.map((resource) => ({
+      name: resource.key,
+      value: resource.value ?? '',
+      comment: resource.info?.comment ?? '',
+      enabled: true
+    }));
   } catch (error) {
     console.error('Error loading resources:', error);
     return [];

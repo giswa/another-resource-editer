@@ -12,10 +12,10 @@ const xmlParser = new XMLParser({
   attributeNamePrefix: '@_',
   trimValues: true
 });
-async function Xml2Json(datasource, path, lang) {
+const loadResources = async () => {
   let data = '';
   try {
-    data = await fetchFile(path);
+    data = await fetchFile('Sample.resx');
   } catch (error) {
     console.error(error);
     return [];
@@ -23,71 +23,49 @@ async function Xml2Json(datasource, path, lang) {
   try {
     const parsed = xmlParser.parse(data);
     const dataElements = Array.isArray(parsed?.root?.data) ? parsed.root.data : parsed?.root?.data ? [parsed.root.data] : [];
-    return dataElements.filter(node => !node?.['@_type'] && !node?.['@_name']?.startsWith('>>')).map(node => matchTrad(node, datasource, lang, path));
+    return dataElements.filter(node => !node?.['@_type'] && !node?.['@_name']?.startsWith('>>')).map(node => ({
+      name: node?.['@_name'] ?? '',
+      value: node?.value,
+      comment: node?.comment,
+      enabled: true
+    }));
   } catch (error) {
     console.error(error);
     throw new Error('error while parsing');
   }
-}
-function matchTrad(node, datasource, lang, path) {
-  const key = node?.['@_name'] ?? '';
-  const value = node?.value;
-  const info = splitCommentToInfo(lang, node?.comment);
-  return {
-    path,
-    datasource,
-    key,
-    lang,
-    value,
-    info
-  };
-}
-function splitCommentToInfo(lang, encodedComment) {
-  let editor = '';
-  let validation = false;
-  let date = '';
-  let comment = '';
-  if (encodedComment) {
-    // console.log(encoded)
-
-    // default language contains main comment
-    {
-      // Ensure a split separator
-      encodedComment = encodedComment + "|";
-      comment = encodedComment.split('|')[0].split(',')[0];
-      date = encodedComment.split('|')[0].split(',')[1];
-      let valid_info = encodedComment.split("|")[1];
-      if (valid_info) {
-        validation = true;
-        let editorArray = encodedComment.split(':');
-        if (editorArray[1]) {
-          editor = editorArray[1].trim();
-        }
+};
+const saveResources = async resources => {
+  try {
+    // create an Array of translations to be saved
+    const translations = [];
+    for (const resource of resources) {
+      if (!resource.enabled) {
+        continue; // Skip saving this resource if not enabled
       }
+      let translation = {
+        "fr": {
+          datasource: "Sample",
+          path: "Sample.resx",
+          key: resource.name,
+          lang: "fr",
+          value: resource.value,
+          info: {
+            validation: false,
+            editor: '',
+            date: '',
+            comment: resource.comment
+          }
+        }
+      };
+      translations.push(translation);
     }
+
+    // Call Json2XML to save changes
+    await Json2XML(translations, "commit message");
+  } catch (error) {
+    console.error('Error saving resources:', error);
   }
-  return {
-    validation: validation,
-    date: date,
-    editor: editor,
-    comment: comment
-  };
-}
-function mergeInfoToComment(lang, info) {
-  let editor = "";
-  let date = "";
-  let valid = "";
-  let comment = "";
-  if (info.validation) valid = "OK";
-  if (info.comment) comment = info.comment;
-  if (info.editor) editor = `:${info.editor}`;
-  if (info.date) date = `,${info.date}`;
-  if (lang == 'fr') {
-    return `${comment}${date}|${valid}${editor}`;
-  } else {
-    return `${valid}${editor}`;
-  }
-}
+};
 
 // save change into XML
 async function Json2XML(translations, commitMessage) {
@@ -131,7 +109,7 @@ async function sendTranslations(translations, commitMessage) {
     for (const trans of translations[path]) {
       // console.log(`Processing key: ${trans.key} with value: ${trans.value}`) ;
       // Change the value node and the comment
-      xml = updateOrInsertResxEntry(xml, trans.key, trans.value, mergeInfoToComment(trans.lang, trans.info));
+      xml = updateOrInsertResxEntry(xml, trans.key, trans.value, trans.info.comment);
     }
     translations[path].content = xml;
   }
@@ -186,53 +164,6 @@ function updateOrInsertResxEntry(xml, key, newValue, newComment) {
 function escapeXml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
-
-const loadResources = async () => {
-  try {
-    const resources = await Xml2Json('Sample', 'Sample.resx', 'fr');
-    return resources.map(resource => ({
-      name: resource.key,
-      value: resource.value ?? '',
-      comment: resource.info?.comment ?? '',
-      enabled: true
-    }));
-  } catch (error) {
-    console.error('Error loading resources:', error);
-    return [];
-  }
-};
-const saveResources = async resources => {
-  try {
-    // create an Array of translations to be saved
-    const translations = [];
-    for (const resource of resources) {
-      if (!resource.enabled) {
-        continue; // Skip saving this resource if not enabled
-      }
-      let translation = {
-        "fr": {
-          datasource: "Sample",
-          path: "Sample.resx",
-          key: resource.name,
-          lang: "fr",
-          value: resource.value,
-          info: {
-            validation: false,
-            editor: '',
-            date: '',
-            comment: resource.comment
-          }
-        }
-      };
-      translations.push(translation);
-    }
-
-    // Call Json2XML to save changes
-    await Json2XML(translations, "commit message");
-  } catch (error) {
-    console.error('Error saving resources:', error);
-  }
-};
 
 const ListItem = ({
   label,

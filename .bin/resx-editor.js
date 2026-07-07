@@ -5,13 +5,17 @@ import { render, useInput, Box, Text } from 'ink';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
 import { XMLParser } from 'fast-xml-parser';
-import { fetchFile, getObjectId, saveFiles } from 'git-storage-api';
+import { getObjectId, saveFiles } from 'git-storage-api/azure';
+import { setRootDir, fetchFile } from 'git-storage-api/localsytem';
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   trimValues: true
 });
+
+// rootURL = 'https://dev.azure.com/your-organization/your-project/_git/your-repo';
+setRootDir('/Users/gis/Projects/mocks/data/');
 const loadResources = async () => {
   let data = '';
   try {
@@ -111,7 +115,9 @@ async function sendTranslations(translations, commitMessage) {
       // Change the value node and the comment
       xml = updateOrInsertResxEntry(xml, trans.key, trans.value, trans.info.comment);
     }
-    translations[path].content = xml;
+    // store the updated xml back to translations object
+    // overwriting the original array with the updated XML content
+    translations[path] = xml;
   }
   await saveFiles(translations, oldObjectId, commitMessage);
 }

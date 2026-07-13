@@ -21,6 +21,14 @@ npm install
 npm start
 ```
 
+To target a specific resx file:
+
+```bash
+node .bin/resx-editor.js --file path/to/file.resx
+# or
+node .bin/resx-editor.js -f path/to/file.resx
+```
+
 Or with watch mode for development:
 
 ```bash

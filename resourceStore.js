@@ -8,15 +8,11 @@ const xmlParser = new XMLParser({
     trimValues: true
 });
 
-// rootURL = 'https://dev.azure.com/your-organization/your-project/_git/your-repo';
-setRootDir('/Users/gis/Projects/mocks/data/');
-
-
-export const loadResources = async () => {
+export const loadResources = async (filePath = 'Sample.resx') => {
 
   let data = '';
   try {
-      data = await fetchFile('Sample.resx');
+      data = await fetchFile(filePath);
   } catch (error) {
       console.error(error);
       return [];
@@ -46,7 +42,7 @@ export const loadResources = async () => {
 
 };
 
-export const saveResources = async (resources) => {
+export const saveResources = async (resources, filePath = 'Sample.resx') => {
   try {
 
     // create an Array of translations to be saved
@@ -58,7 +54,7 @@ export const saveResources = async (resources) => {
       }
       
       let translation = { "fr": { datasource: "Sample", 
-                                  path: "Sample.resx", 
+                                  path: filePath, 
                                   key: resource.name , 
                                   lang: "fr", 
                                   value: resource.value, 

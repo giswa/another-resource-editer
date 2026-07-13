@@ -6,20 +6,17 @@ import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
 import { XMLParser } from 'fast-xml-parser';
 import { getObjectId, saveFiles } from 'git-storage-api/azure';
-import { setRootDir, fetchFile } from 'git-storage-api/localsytem';
+import { fetchFile } from 'git-storage-api/localsytem';
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   trimValues: true
 });
-
-// rootURL = 'https://dev.azure.com/your-organization/your-project/_git/your-repo';
-setRootDir('/Users/gis/Projects/mocks/data/');
-const loadResources = async () => {
+const loadResources = async (filePath = 'Sample.resx') => {
   let data = '';
   try {
-    data = await fetchFile('Sample.resx');
+    data = await fetchFile(filePath);
   } catch (error) {
     console.error(error);
     return [];
@@ -38,7 +35,7 @@ const loadResources = async () => {
     throw new Error('error while parsing');
   }
 };
-const saveResources = async resources => {
+const saveResources = async (resources, filePath = 'Sample.resx') => {
   try {
     // create an Array of translations to be saved
     const translations = [];
@@ -49,7 +46,7 @@ const saveResources = async resources => {
       let translation = {
         "fr": {
           datasource: "Sample",
-          path: "Sample.resx",
+          path: filePath,
           key: resource.name,
           lang: "fr",
           value: resource.value,
@@ -171,6 +168,47 @@ function escapeXml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
+const parseCliArgs = (argv = process.argv.slice(2)) => {
+  const options = {
+    file: 'Sample.resx',
+    help: false
+  };
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index];
+    if (argument === '--help' || argument === '-h') {
+      options.help = true;
+      continue;
+    }
+    if (argument === '--file' || argument === '-f') {
+      const value = argv[index + 1];
+      if (!value || value.startsWith('-')) {
+        throw new Error('Missing value for --file/-f');
+      }
+      options.file = value;
+      index += 1;
+      continue;
+    }
+    if (argument.startsWith('--file=')) {
+      options.file = argument.slice('--file='.length);
+      continue;
+    }
+    throw new Error(`Unknown argument: ${argument}`);
+  }
+  return options;
+};
+
+const cliArgs = (() => {
+  try {
+    return parseCliArgs();
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+})();
+if (cliArgs.help) {
+  console.log('Usage: resx-editor [--file <path> | -f <path>] [--help | -h]');
+  process.exit(0);
+}
 const ListItem = ({
   label,
   isSelected,
@@ -180,7 +218,9 @@ const ListItem = ({
     color: enabled === false ? 'gray' : isSelected ? 'blue' : undefined
   }, label);
 };
-const App = () => {
+const App = ({
+  activeFile
+}) => {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -195,11 +235,11 @@ const App = () => {
   const [editEnabled, setEditEnabled] = useState(true);
   const [focusedField, setFocusedField] = useState('name');
   useEffect(() => {
-    loadResources().then(data => {
+    loadResources(activeFile).then(data => {
       setResources(data);
       setLoading(false);
     });
-  }, []);
+  }, [activeFile]);
   const handleSubmitBoth = () => {
     const updated = [...resources];
     updated[selectedIndex] = {
@@ -220,7 +260,7 @@ const App = () => {
       return;
     }
     setSaving(true);
-    saveResources(resources).then(() => {
+    saveResources(resources, activeFile).then(() => {
       process.exit(0);
     }).catch(err => {
       console.error('Save error:', err);
@@ -329,7 +369,7 @@ const App = () => {
       flexDirection: "column"
     }, /*#__PURE__*/React.createElement(Text, {
       bold: true
-    }, "Resources (Sample.resx)"), hasChanges && /*#__PURE__*/React.createElement(Text, {
+    }, "Resources (", activeFile, ")"), hasChanges && /*#__PURE__*/React.createElement(Text, {
       color: "yellow"
     }, "Unsaved changes will be pushed on exit."), saving && /*#__PURE__*/React.createElement(Text, {
       color: "yellow"
@@ -381,6 +421,8 @@ const App = () => {
     }, "(Tab to switch, Space to toggle, Enter to submit, Esc to cancel)")));
   }
 };
-render(/*#__PURE__*/React.createElement(App, null));
+render(/*#__PURE__*/React.createElement(App, {
+  activeFile: cliArgs.file
+}));
 
 export { App as default };

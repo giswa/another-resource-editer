@@ -4,6 +4,21 @@ import { render, Box, Text, useInput } from 'ink';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
 import { loadResources, saveResources } from './resourceStore.js';
+import { parseCliArgs } from './cliArgs.js';
+
+const cliArgs = (() => {
+  try {
+    return parseCliArgs();
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+})();
+
+if (cliArgs.help) {
+  console.log('Usage: resx-editor [--file <path> | -f <path>] [--help | -h]');
+  process.exit(0);
+}
 
 const ListItem = ({ label, isSelected, enabled = true }) => {
   return (
@@ -13,7 +28,7 @@ const ListItem = ({ label, isSelected, enabled = true }) => {
   );
 };
 
-const App = () => {
+const App = ({ activeFile }) => {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -29,11 +44,11 @@ const App = () => {
   const [focusedField, setFocusedField] = useState('name');
 
   useEffect(() => {
-    loadResources().then(data => {
+    loadResources(activeFile).then(data => {
       setResources(data);
       setLoading(false);
     });
-  }, []);
+  }, [activeFile]);
 
   const handleSubmitBoth = () => {
     const updated = [...resources];
@@ -57,7 +72,7 @@ const App = () => {
     }
 
     setSaving(true);
-    saveResources(resources)
+    saveResources(resources, activeFile)
       .then(() => {
         process.exit(0);
       })
@@ -195,7 +210,7 @@ const App = () => {
 
     return (
       <Box flexDirection="column">
-        <Text bold>Resources (Sample.resx)</Text>
+        <Text bold>Resources ({activeFile})</Text>
         {hasChanges && <Text color="yellow">Unsaved changes will be pushed on exit.</Text>}
         {saving && <Text color="yellow">⊙ Pushing to Azure DevOps...</Text>}
         <SelectInput
@@ -265,4 +280,4 @@ const App = () => {
 
 export default App;
 
-render(<App />);
+render(<App activeFile={cliArgs.file} />);

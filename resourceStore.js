@@ -1,6 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
-import { getObjectId, saveFiles, rootURL } from 'git-storage-api/azure';
-import { fetchFile, setRootDir } from 'git-storage-api/localsytem';
+import { getObjectId, fetchFile, saveFiles, rootURL } from 'git-storage-api/azure';
+import { fetchFile as getLocalFile, setRootDir } from 'git-storage-api/localsytem';
 
 const xmlParser = new XMLParser({
     ignoreAttributes: false,
@@ -12,7 +12,7 @@ export const loadResources = async (filePath = 'Sample.resx') => {
 
   let data = '';
   try {
-      data = await fetchFile(filePath);
+      data = await getLocalFile(filePath);
   } catch (error) {
       console.error(error);
       return [];
@@ -45,75 +45,16 @@ export const loadResources = async (filePath = 'Sample.resx') => {
 export const saveResources = async (resources, filePath = 'Sample.resx') => {
   try {
 
-    // create an Array of translations to be saved
-    const translations = [];
-    for (const resource of resources) {
+    const result = {};
+    result[filePath] = resources ;
 
-      if (!resource.enabled) {
-        continue ; // Skip saving this resource if not enabled
-      }
-      
-      let translation = { "fr": { datasource: "Sample", 
-                                  path: filePath, 
-                                  key: resource.name , 
-                                  lang: "fr", 
-                                  value: resource.value, 
-                                  info: { 
-                                    validation: false,
-                                    editor: '',
-                                    date: '',
-                                    comment: resource.comment
-                                  }
-                                } 
-                          };
+    await sendTranslations(result, "commit message")
 
-      translations.push(translation);
-    }
-    
-    // Call Json2XML to save changes
-    await Json2XML(translations, "commit message");
-
-    
   } catch (error) {
     console.error('Error saving resources:', error);
   }
 };
 
-
-
-// save change into XML
-async function Json2XML(translations, commitMessage) {
-
-    const input = translations;
-    const result = {};
-
-    for (let i = 0; i < input.length; i++) {
-        const item = input[i];
-
-        // Each item is an object with one key, such as "fr" or "de"
-        const languageKey = Object.keys(item)[0];
-
-        // Get the object stored under that language key
-        const entry = item[languageKey];
-
-        // Use the file path as the group name
-        const filePath = entry.path;
-
-        // If this path has not been seen yet, create an array for it
-        if (!result[filePath]) {
-            result[filePath] = [];
-        }
-
-        // Add the normalized object to the right group
-        result[filePath].push(entry);
-        result[filePath]["content"] = ""; // Initialize content for each file path
-    }
-
-    // console.log(result);
-
-    await sendTranslations(result, commitMessage)
-
-}
 
 async function sendTranslations(translations, commitMessage) {
 
@@ -129,9 +70,9 @@ async function sendTranslations(translations, commitMessage) {
 
         // loop through all translations for this file
         for( const trans of translations[path] ){   
-            // console.log(`Processing key: ${trans.key} with value: ${trans.value}`) ;
+            // console.log(`Processing key: ${trans.name} with value: ${trans.value}`) ;
             // Change the value node and the comment
-            xml = updateOrInsertResxEntry(xml, trans.key, trans.value , trans.info.comment );
+            xml = updateOrInsertResxEntry(xml, trans.name, trans.value , trans.comment );
         }
         // store the updated xml back to translations object
         // overwriting the original array with the updated XML content

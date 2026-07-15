@@ -1,11 +1,11 @@
 {
-  "name": "ink-resources-editor",
+  "name": "resx-editor",
   "version": "1.0.0",
-  "description": "A Node.js console app to list, check, and edit resources using Ink/React",
+  "description": "A Node.js console app to list, check, and edit resources",
   "main": "index.js",
-  "type": "module" ,
+  "type": "module",
   "bin": {
-    "resx-editor": "./.bin/resx-editor.js"
+    "resx-editor": ".bin/resx-editor.js"
   },
   "scripts": {
     "build": "rollup -c",

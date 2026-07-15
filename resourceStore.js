@@ -1,6 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import { getObjectId, fetchFile, saveFiles, rootURL } from 'git-storage-api/azure';
-import { fetchFile as getLocalFile, setRootDir } from 'git-storage-api/localsytem';
+import { fetchFile as getLocalFile, saveFiles as setLocalFile, setRootDir } from 'git-storage-api/localsytem';
 
 const xmlParser = new XMLParser({
     ignoreAttributes: false,
@@ -49,6 +49,8 @@ export const saveResources = async (resources, filePath = 'Sample.resx') => {
     result[filePath] = resources ;
 
     await sendTranslations(result, "commit message")
+
+    
 
   } catch (error) {
     console.error('Error saving resources:', error);

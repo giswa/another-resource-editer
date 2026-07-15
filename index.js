@@ -5,6 +5,7 @@ import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
 import { loadResources, saveResources } from './resourceStore.js';
 import { parseCliArgs } from './cliArgs.js';
+import { getConfirmExitAction } from './confirmExit.js';
 
 const cliArgs = (() => {
   try {
@@ -87,15 +88,30 @@ const App = ({ activeFile }) => {
     setMode('list');
   };
 
+  const quitWithoutSaving = () => {
+    process.exit(0);
+  };
+
   // Global key handling: Q to quit, Esc to go back
   useInput((input, key) => {
     if (mode === 'confirmExit') {
-      if (input === 'y' || input === 'Y') {
+      const action = getConfirmExitAction(input, key);
+
+      if (action === 'confirm') {
         confirmSaveAndExit();
+        return;
       }
-      if (input === 'n' || input === 'N') {
+
+      if (action === 'quit') {
+        quitWithoutSaving();
+        return;
+      }
+
+      if (action === 'cancel') {
         cancelExit();
+        return;
       }
+
       return;
     }
 
@@ -183,10 +199,8 @@ const App = ({ activeFile }) => {
   if (mode === 'confirmExit') {
     return (
       <Box borderStyle="round" flexDirection="column" paddingX={1} paddingY={1}>
-        <Text bold>Save changes and exit?</Text>
-        <Text>Resources will be pushed to Azure DevOps on confirm.</Text>
-        <Text>{hasChanges ? 'You have unsaved changes.' : 'No changes to save.'}</Text>
-        <Text>Press Y to save and exit, N to cancel.</Text>
+        <Text bold>Send resources?</Text>
+        <Text dimColor>Press Y to confirm, Q to quit</Text>
         {saving && <Text color="yellow">⊙ Saving changes...</Text>}
       </Box>
     );
@@ -211,7 +225,6 @@ const App = ({ activeFile }) => {
     return (
       <Box flexDirection="column">
         <Text bold>Resources ({activeFile})</Text>
-        {hasChanges && <Text color="yellow">Unsaved changes will be pushed on exit.</Text>}
         {saving && <Text color="yellow">⊙ Pushing to Azure DevOps...</Text>}
         <SelectInput
           items={listItems}
@@ -219,7 +232,7 @@ const App = ({ activeFile }) => {
           onSelect={handleResourceSelect}
           onHighlight={handleHighlight}
         />
-        <Text dimColor>(Press Space to toggle enabled, Q to exit, Enter to edit both)</Text>
+        <Text dimColor>(Press Space to toggle enabled, Q to exit, Enter to edit)</Text>
       </Box>
     );
   }

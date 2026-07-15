@@ -143,6 +143,19 @@ const parseCliArgs = (argv = process.argv.slice(2)) => {
   return options;
 };
 
+const getConfirmExitAction = (input, key) => {
+  if (input === 'y' || input === 'Y') {
+    return 'confirm';
+  }
+  if (input === 'q' || input === 'Q') {
+    return 'quit';
+  }
+  if (input === 'n' || input === 'N' || key.escape) {
+    return 'cancel';
+  }
+  return null;
+};
+
 const cliArgs = (() => {
   try {
     return parseCliArgs();
@@ -217,15 +230,25 @@ const App = ({
   const cancelExit = () => {
     setMode('list');
   };
+  const quitWithoutSaving = () => {
+    process.exit(0);
+  };
 
   // Global key handling: Q to quit, Esc to go back
   useInput((input, key) => {
     if (mode === 'confirmExit') {
-      if (input === 'y' || input === 'Y') {
+      const action = getConfirmExitAction(input, key);
+      if (action === 'confirm') {
         confirmSaveAndExit();
+        return;
       }
-      if (input === 'n' || input === 'N') {
+      if (action === 'quit') {
+        quitWithoutSaving();
+        return;
+      }
+      if (action === 'cancel') {
         cancelExit();
+        return;
       }
       return;
     }
@@ -292,7 +315,9 @@ const App = ({
       paddingY: 1
     }, /*#__PURE__*/React.createElement(Text, {
       bold: true
-    }, "Save changes and exit?"), /*#__PURE__*/React.createElement(Text, null, "Resources will be pushed to Azure DevOps on confirm."), /*#__PURE__*/React.createElement(Text, null, hasChanges ? 'You have unsaved changes.' : 'No changes to save.'), /*#__PURE__*/React.createElement(Text, null, "Press Y to save and exit, N to cancel."), saving && /*#__PURE__*/React.createElement(Text, {
+    }, "Send resources?"), /*#__PURE__*/React.createElement(Text, {
+      dimColor: true
+    }, "Press Y to confirm, Q to quit"), saving && /*#__PURE__*/React.createElement(Text, {
       color: "yellow"
     }, "\u2299 Saving changes..."));
   }
@@ -315,9 +340,7 @@ const App = ({
       flexDirection: "column"
     }, /*#__PURE__*/React.createElement(Text, {
       bold: true
-    }, "Resources (", activeFile, ")"), hasChanges && /*#__PURE__*/React.createElement(Text, {
-      color: "yellow"
-    }, "Unsaved changes will be pushed on exit."), saving && /*#__PURE__*/React.createElement(Text, {
+    }, "Resources (", activeFile, ")"), saving && /*#__PURE__*/React.createElement(Text, {
       color: "yellow"
     }, "\u2299 Pushing to Azure DevOps..."), /*#__PURE__*/React.createElement(SelectInput, {
       items: listItems,
@@ -326,7 +349,7 @@ const App = ({
       onHighlight: handleHighlight
     }), /*#__PURE__*/React.createElement(Text, {
       dimColor: true
-    }, "(Press Space to toggle enabled, Q to exit, Enter to edit both)"));
+    }, "(Press Space to toggle enabled, Q to exit, Enter to edit)"));
   }
 
   // Edit popup

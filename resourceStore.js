@@ -1,6 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import { getObjectId, fetchFile, saveFiles, rootURL } from 'git-storage-api/azure';
-import { fetchFile as getLocalFile, saveFiles as setLocalFile, setRootDir } from 'git-storage-api/localsytem';
+import { getObjectId as getLocalObjectId, fetchFile as getLocalFile, saveFiles as saveLocalFiles, setRootDir } from 'git-storage-api/localsytem';
 
 const xmlParser = new XMLParser({
     ignoreAttributes: false,
@@ -47,7 +47,8 @@ export const saveResources = async (resources, filePath = 'Sample.resx') => {
 
     const result = {};
     result[filePath] = resources ;
-
+    // save locally and send to remote repository ;
+    await saveTranslations(result, "commit message")
     await sendTranslations(result, "commit message")
 
     
@@ -84,6 +85,35 @@ async function sendTranslations(translations, commitMessage) {
     await saveFiles( translations, oldObjectId, commitMessage )
    
 }
+
+async function saveTranslations(translations, commitMessage) {
+
+    // get last commit ID
+    const oldObjectId = await getLocalObjectId();
+        
+    let changes = [] ;
+    
+    for (const path in translations) {
+        // console.log(`Processing translations for file: ${path}`);
+        // first reload all original source file 
+        let xml = await getLocalFile( path ) ;
+
+        // loop through all translations for this file
+        for( const trans of translations[path] ){   
+            // console.log(`Processing key: ${trans.name} with value: ${trans.value}`) ;
+            // Change the value node and the comment
+            xml = updateOrInsertResxEntry(xml, trans.name, trans.value , trans.comment );
+        }
+        // store the updated xml back to translations object
+        // overwriting the original array with the updated XML content
+        translations[path] = xml ;
+    }
+
+    await saveLocalFiles( translations, oldObjectId, commitMessage )
+   
+}
+
+
 
 
 function updateOrInsertResxEntry(xml, key, newValue, newComment) {
